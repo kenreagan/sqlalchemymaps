@@ -1,0 +1,12 @@
+__pycache__/
+
+
+.ide?
+
+venv/
+
+*sqlite
+
+*.db
+
+*.env
