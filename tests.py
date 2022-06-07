@@ -15,27 +15,18 @@ class TestApplication(unittest.TestCase):
         self.app = create_app(configuration_file='configuration.TestingConfig')
         self.app.context = self.app.app_context()
         self.app.context.push()
-        self.engine = create_engine(
-            'sqlite:///test.db',
-            echo=False,
-            connect_args={
-                "check_same_thread": False
-            }
-        )
-        self.session = sessionmaker(bind=self.engine)
-        Base.metadata.create_all(self.engine)
+        Base.metadata.create_all(create_engine('sqlite:///test.db'))
         self.basePath = os.path.abspath(os.path.dirname(__file__))
         self.client = self.app.test_client(use_cookies=True)
         self.userManager = DatabaseTableMixin(User)
         self.TaskManager = DatabaseTableMixin(Tasks)
         self.RoleManager = DatabaseTableMixin(Role)
         self.roleMapper = BaseMapper()
-        print(self.roleMapper)
         self.roleMapper.create_role_permission()
 
     def tearDown(self) -> None:
         self.app.context.pop()
-        Base.metadata.drop_all(self.engine)
+        Base.metadata.drop_all(bind=create_engine('sqlite:///test.db'))
         os.unlink(os.path.join(self.basePath, 'test.db'))
 
     def testApplicationCreation(self):
@@ -122,17 +113,17 @@ class TestApplication(unittest.TestCase):
         self.assertIsInstance(response.data, bytes)
 
     def testUserEndpoints(self):
-        response = self.client.get('/users')
+        response = self.client.get('/users', headers={
+            'content-type': 'application/json'
+        })
+        json_data = response.json
+        self.assertIsInstance(json_data, dict)
+        self.assertGreater(len(json_data['users']), 0)
         self.assertEqual(response.status_code, 200)
 
     def testTaskEndpoints(self):
         response = self.client.get('/tasks')
         self.assertEqual(response.status_code, 200)
-
-    def testRolesEndpoint(self):
-        response = self.client.get('/roles')
-        self.assertEqual(response.status_code, 200)
-
 
 if __name__ == '__main__':
     unittest.main()

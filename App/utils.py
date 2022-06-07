@@ -128,7 +128,6 @@ class BaseMapper(RolesMapper):
             pass
 
 
-
 class DatabaseTableMixin(MutableMapping, ABC):
     """
         Allow for the indirect interaction of the application with the models
