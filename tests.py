@@ -61,6 +61,14 @@ class TestApplication(unittest.TestCase):
         self.assertIsNotNone(lumuli)
         self.assertGreater(len(self.userManager), 0)
 
+        response = self.client.get('/users', headers={
+            'content-type': 'application/json'
+        })
+        json_data = response.json
+        self.assertIsInstance(json_data, dict)
+        self.assertGreater(len(json_data['users']), 0)
+        self.assertEqual(response.status_code, 200)
+
     def testTaskCreation(self):
         self.assertEqual(0, len([items for items in iter(self.TaskManager)]))
         task_1payload: Dict[str, str] = {
@@ -111,15 +119,6 @@ class TestApplication(unittest.TestCase):
         response = self.client.get('/index')
         self.assertTrue(response.status_code, 200)
         self.assertIsInstance(response.data, bytes)
-
-    def testUserEndpoints(self):
-        response = self.client.get('/users', headers={
-            'content-type': 'application/json'
-        })
-        json_data = response.json
-        self.assertIsInstance(json_data, dict)
-        self.assertGreater(len(json_data['users']), 0)
-        self.assertEqual(response.status_code, 200)
 
     def testTaskEndpoints(self):
         response = self.client.get('/tasks')
