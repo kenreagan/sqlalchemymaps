@@ -1,6 +1,6 @@
 from typing import Dict, Optional, TypeVar
 from werkzeug.exceptions import abort
-from App import mpesa
+# from App import mpesa
 from flask import jsonify
 from flask_smorest import Blueprint
 from flask.views import MethodView
@@ -9,15 +9,21 @@ from App.models import User, Tasks, Role
 from App.utils import DatabaseTableMixin
 from App.schema import UserSchema, UserPrototype, TableIDSchema, TaskManagerSchema
 from functools import wraps
-from flask_jwt_extended import verify_jwt_in_request
+# from flask_jwt_extended import verify_jwt_in_request
+from prometheus_client import Summary
 
 views = Blueprint('views', __name__)
+
+request_timer = Summary(
+    'time_request_summary',
+    'track endpoint request summary to track the slow endpoints'
+)
 
 
 def verify_request_headers(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        verify_jwt_in_request()
+        # verify_jwt_in_request()
         return func(*args, **kwargs)
 
     return wrapper
@@ -61,6 +67,7 @@ class UserManager(MethodView):
         self.UserManager = DatabaseTableMixin(User)
 
     @views.response(schema=UserPrototype, status_code=200)
+    @request_timer.time()
     def get(self):
         return {
             "users": [
@@ -70,6 +77,7 @@ class UserManager(MethodView):
 
     @views.response(schema=UserSchema, status_code=201)
     @views.arguments(schema=UserSchema)
+    @request_timer.time()
     def post(self, payload: Dict[str, Optional[dict_object]]) -> Dict[str, Optional[dict_object]]:
         payload['password'] = generate_password_hash(payload['password'])
         self.UserManager.__create_item__(payload)
@@ -95,6 +103,7 @@ class UserManager(MethodView):
 
 
 @views.route('/user/<int:userid>')
+@request_timer.time()
 def get_by_id(userid):
     res = DatabaseTableMixin(User)[userid].__getitem__('User').to_json()
     return res
@@ -124,6 +133,7 @@ class TaskManager(MethodView):
     def patch(self, payload):
         self.ManagerTable[payload['id']] = payload
         return payload
+
     @verify_request_headers
     def put(self, payload):
         self.ManagerTable[payload['id']] = payload
@@ -142,10 +152,12 @@ def get_by_id(taskid):
     res = DatabaseTableMixin(Tasks)[taskid].__getitem__('Tasks').to_json()
     return res
 
+
 @verify_request_headers
 @views.route('/claim/task/<int:id>', methods=['POST'])
 def claim_task(id):
     return
+
 
 @verify_request_headers
 @views.route('/get/task/<int:userid>')

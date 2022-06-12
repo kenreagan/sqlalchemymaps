@@ -3,7 +3,7 @@ from collections.abc import MutableMapping
 from App.databasemanager import DatabaseContextManager
 from App.models import Base, Role
 from enum import Enum
-from typing import Iterable, List, Dict
+from typing import Iterable, List, Dict, Any
 from sqlalchemy import insert, update, select
 
 
@@ -144,7 +144,7 @@ class DatabaseTableMixin(MutableMapping, ABC):
             response = contextmanager.session.execute(statement).first()
         return response
 
-    def __create_item__(self, value):
+    def __create_item__(self, value: Dict[str, Any]):
         with DatabaseContextManager() as contextmanager:
             statement = insert(self.table).values(
                 **value
