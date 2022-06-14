@@ -10,9 +10,5 @@ if __name__ == '__main__':
             '/metrics': make_wsgi_app()
         }
     )
-    prof = profiler.ProfilerMiddleware(
-        app,
-        open('profiler.prof', 'wb'),
-        sort_by=('time')
-    )
+
     app.run(debug=True)

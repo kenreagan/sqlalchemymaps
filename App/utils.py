@@ -5,6 +5,16 @@ from App.models import Base, Role
 from enum import Enum
 from typing import Iterable, List, Dict, Any
 from sqlalchemy import insert, update, select
+from functools import wraps
+
+
+def verify_request_headers(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        # verify_jwt_in_request()
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
 class Permissions(Enum):

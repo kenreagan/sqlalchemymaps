@@ -1,15 +1,48 @@
 from __future__ import annotations
 
-from typing import Iterable
-
+from typing import Dict, Optional
+from flask import current_app
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, ForeignKey, Integer, Boolean
 from sqlalchemy.orm import relationship
-
-# from App.utils import Permissions, BaseMapper
+import datetime
+import jwt
 
 Base = declarative_base()
 
+
+class AuthenticationMixin:
+    def generate_token(self, userid: int):
+        payload: Dict[str, Optional] = {
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(days=0, hours=2, minutes=0),
+            "iat": datetime.datetime.utcnow(),
+            "sub": userid
+        }
+        return jwt.encode(payload, key=current_app.config['SECRET_KEY'], algorithm='HS256')
+
+    @staticmethod
+    def decode_token(token):
+        try:
+            payload = jwt.decode(token, key=current_app.config['SECRET_KEY'], algorithms=['HS256'])
+            return payload['sub']
+        except jwt.ExpiredSignatureError:
+            return {
+                "code": 404,
+                "status": "ExpiredSignatureError",
+                "message": "Expired token",
+                "errors": {
+                    "": ""
+                }
+            }
+        except jwt.InvalidTokenError:
+            return {
+                "code": 403,
+                "status": "InvalidTokenError",
+                "message": "Invalid token used",
+                "errors": {
+                    "": ""
+                }
+            }
 
 class User(Base):
     __tablename__ = 'user'

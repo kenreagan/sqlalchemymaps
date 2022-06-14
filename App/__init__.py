@@ -39,4 +39,8 @@ def create_app(configuration_file='configuration.Config'):
     from App.views import views
 
     api.register_blueprint(views, url_prefix='/')
+
+    from App.taskviews import taskers
+
+    api.register_blueprint(taskers, url_prefix='/tasks/')
     return app

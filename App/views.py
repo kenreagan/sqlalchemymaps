@@ -6,28 +6,18 @@ from flask_smorest import Blueprint
 from flask.views import MethodView
 from werkzeug.security import generate_password_hash
 from App.models import User, Tasks, Role
-from App.utils import DatabaseTableMixin
+from App.utils import DatabaseTableMixin, verify_request_headers
 from App.schema import UserSchema, UserPrototype, TableIDSchema, TaskManagerSchema
 from functools import wraps
 # from flask_jwt_extended import verify_jwt_in_request
 from prometheus_client import Summary
 
-views = Blueprint('views', __name__)
+views = Blueprint('Main User Manager', __name__)
 
 request_timer = Summary(
     'time_request_summary',
     'track endpoint request summary to track the slow endpoints'
 )
-
-
-def verify_request_headers(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        # verify_jwt_in_request()
-        return func(*args, **kwargs)
-
-    return wrapper
-
 
 @views.before_request
 def before_request():
@@ -109,50 +99,6 @@ def get_by_id(userid):
     return res
 
 
-@views.route('/tasks')
-class TaskManager(MethodView):
-    def __init__(self):
-        self.ManagerTable = DatabaseTableMixin(Tasks)
-
-    @views.response(status_code=200)
-    def get(self):
-        return jsonify({
-            "tasks": [
-                items.to_json() for items in iter(self.ManagerTable)
-            ]
-        })
-
-    @verify_request_headers
-    @views.response(schema=TaskManagerSchema, status_code=201)
-    @views.arguments(schema=TaskManagerSchema, error_status_code=400)
-    def post(self, payload):
-        self.ManagerTable.__create_item__(payload)
-        return payload
-
-    @verify_request_headers
-    def patch(self, payload):
-        self.ManagerTable[payload['id']] = payload
-        return payload
-
-    @verify_request_headers
-    def put(self, payload):
-        self.ManagerTable[payload['id']] = payload
-        return payload
-
-    @verify_request_headers
-    def delete(self, task_id):
-        self.UserManager.__delitem__(task_id)
-        return {
-            "message": "success"
-        }
-
-
-@views.route('/tasks/<int:taskid>')
-def get_by_id(taskid):
-    res = DatabaseTableMixin(Tasks)[taskid].__getitem__('Tasks').to_json()
-    return res
-
-
 @verify_request_headers
 @views.route('/claim/task/<int:id>', methods=['POST'])
 def claim_task(id):
@@ -182,31 +128,25 @@ class RoleManager(MethodView):
 # client and administrator
 @client_and_admin_only
 @verify_request_headers
+@request_timer.time()
 @views.route('/pay/task/<int:taskid>', methods=["POST"])
 def pay_task(taskid):
+    """"
+    Add the Request to payment que for processing by the payment service
+    """
     # get user and task
-    user = current_user()
     task = DatabaseTableMixin(Tasks)
-    pay = task[taskid]
-    # start payment
-    if pay.creator_id == user.id:
-        mpesa.prompt_payment_for_service(
-            {
-                'name': user.name,
-                'phone': user.phone,
-                'amount': pay.amount
-            }
-        )
-        return {
-            "message": "success"
-        }
-    else:
-        abort(403)
+    if len(task) > 0:
+        # start payment
+        #  add details to RabbitMq queue
+        return task[taskid].__getitem__('Tasks').to_json()
+    return {}
 
 
 # superuser and Administrator
 @admins_only
 @verify_request_headers
+@request_timer.time()
 @views.route('/disburse/funds/<int:clientid>')
 def disburse_funds(clientid):
     # pay weekly to client
