@@ -138,8 +138,11 @@ class Tasks(Base):
     id = Column(Integer, nullable=False, primary_key=True)
     description = Column(String, nullable=False)
     Amount = Column(Integer, nullable=False)
+    title = Column(String, nullable=False)
     creator_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     attachment = relationship('Attachment', lazy='dynamic', backref='task', cascade="all, delete-orphan")
+    payment_status = Column(String, default='paid')
+    progress_status = Column(String, default="unclaimed")
 
     def __repr__(self):
         return f"{self.__class__.__qualname__}(Amount={self.Amount}, creator id={self.creator_id})"
@@ -168,7 +171,11 @@ class Tasks(Base):
         return hash((self.Amount, self.description,))
 
     def to_json(self):
-        return self.__dict__
+        return {
+            "Amount": self.Amount,
+            "description": self.description,
+            "creator_id": self.creator_id
+        }
 
 
 class Attachment(Base):

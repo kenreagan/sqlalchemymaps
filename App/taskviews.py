@@ -4,8 +4,15 @@ from flask import jsonify
 from App.utils import DatabaseTableMixin, verify_request_headers
 from App.models import Tasks
 from App.schema import TaskManagerSchema
+from prometheus_client import Summary
 
 taskers = Blueprint('Tasks Manager', __name__)
+
+task_funcs_summary = Summary(
+    "time_task_summary",
+    "time the total time for tasks"
+)
+
 
 @taskers.route('/')
 class TaskManager(MethodView):
@@ -13,6 +20,7 @@ class TaskManager(MethodView):
         self.ManagerTable = DatabaseTableMixin(Tasks)
 
     @taskers.response(status_code=200)
+    @task_funcs_summary.time()
     def get(self):
         return jsonify({
             "tasks": [
@@ -23,6 +31,7 @@ class TaskManager(MethodView):
     @verify_request_headers
     @taskers.response(schema=TaskManagerSchema, status_code=201)
     @taskers.arguments(schema=TaskManagerSchema, error_status_code=400)
+    @task_funcs_summary.time()
     def post(self, payload):
         self.ManagerTable.__create_item__(payload)
         return payload

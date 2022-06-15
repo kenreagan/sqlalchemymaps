@@ -17,6 +17,7 @@ class UserPrototype(Schema):
 
 
 class TaskManagerSchema(Schema):
-    amount = fields.Integer()
+    title = fields.String()
+    Amount = fields.Integer()
     description = fields.String()
     creator_id = fields.Integer()

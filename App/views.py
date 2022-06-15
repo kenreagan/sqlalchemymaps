@@ -1,16 +1,19 @@
+import json
 from typing import Dict, Optional, TypeVar
 from werkzeug.exceptions import abort
-# from App import mpesa
 from flask import jsonify
 from flask_smorest import Blueprint
 from flask.views import MethodView
 from werkzeug.security import generate_password_hash
 from App.models import User, Tasks, Role
 from App.utils import DatabaseTableMixin, verify_request_headers
-from App.schema import UserSchema, UserPrototype, TableIDSchema, TaskManagerSchema
+from App.schema import UserSchema, UserPrototype, TableIDSchema
+from App.databasemanager import DatabaseContextManager
 from functools import wraps
 # from flask_jwt_extended import verify_jwt_in_request
 from prometheus_client import Summary
+from App.amqpproducer import SignalProducer
+from sqlalchemy import select, and_
 
 views = Blueprint('Main User Manager', __name__)
 
@@ -102,7 +105,8 @@ def get_by_id(userid):
 @verify_request_headers
 @views.route('/claim/task/<int:id>', methods=['POST'])
 def claim_task(id):
-    return
+    task = DatabaseTableMixin(Tasks)
+    return task[id].__getitem__('Tasks').to_json()
 
 
 @verify_request_headers
@@ -135,11 +139,42 @@ def pay_task(taskid):
     Add the Request to payment que for processing by the payment service
     """
     # get user and task
-    task = DatabaseTableMixin(Tasks)
-    if len(task) > 0:
-        # start payment
+
+    task = DatabaseTableMixin(Tasks)[taskid].__getitem__('Tasks').to_json()
+    if task:
+        # get the user of the task details
+        with DatabaseContextManager() as context:
+            statements = select(
+                User.name,
+                User.email,
+                User.phone
+            )
+            x = statements.select_from(
+                Tasks.__table__.join(
+                    User
+                )
+            ).where(
+                and_(
+                    Tasks.creator_id == 2, # replace it with current user.id
+                    Tasks.id == taskid
+                )
+            )
+
+            res = context.session.execute(x).first()
+        feedback = res._asdict()
+
+        for key, val in task.items():
+            feedback[key] = val
+
+        producer = SignalProducer("Individual Task Payment")
         #  add details to RabbitMq queue
-        return task[taskid].__getitem__('Tasks').to_json()
+        producer.produce_event(
+            'request payment',
+            json.dumps(feedback)
+        )
+        return {
+            "status": "Pending payment"
+        }
     return {}
 
 
@@ -150,4 +185,19 @@ def pay_task(taskid):
 @views.route('/disburse/funds/<int:clientid>')
 def disburse_funds(clientid):
     # pay weekly to client
-    pass
+    user = DatabaseTableMixin(User)[clientid].__getitem__('User').to_json()
+    if user is not None:
+        if user['Amount'] > 500:
+            producer = SignalProducer("Disburse Funds")
+            producer.produce_event(
+                'disburse multiple',
+                str(user)
+            )
+            return {
+                "message": "Funds Disbursed"
+            }
+        return {
+            "Message": "user has low account"
+        }
+    else:
+        return user
