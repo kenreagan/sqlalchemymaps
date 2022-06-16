@@ -1,18 +1,40 @@
 from abc import ABC
 from collections.abc import MutableMapping
 from App.databasemanager import DatabaseContextManager
-from App.models import Base, Role
+from App.models import Base, Role, User
 from enum import Enum
 from typing import Iterable, List, Dict, Any
 from sqlalchemy import insert, update, select
 from functools import wraps
-
+from flask import request, make_response, current_app
+import jwt
 
 def verify_request_headers(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        # verify_jwt_in_request()
-        return func(*args, **kwargs)
+        if "Authorization" in request.headers:
+            token = request.headers['Authorization'].split(' ')[-1]
+            try:
+                validator = jwt.decode(
+                    token,
+                    current_app.config['SECRET_KEY'],
+                    algorithms=['HS256']
+                )
+                with DatabaseContextManager() as context:
+                    current_user = context.session.query(
+                        User
+                    ).filter(
+                        User.id == int(validator['sub'])
+                    ).first()
+            except:
+                return {
+                    "message": "error decoding token"
+                }
+        else:
+            return make_response({
+                "Message": "Token Missing"
+            }, 401)
+        return func(current_user, *args, **kwargs)
 
     return wrapper
 

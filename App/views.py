@@ -1,16 +1,14 @@
 import json
 from typing import Dict, Optional, TypeVar
-from werkzeug.exceptions import abort
-from flask import jsonify
+from flask import jsonify, abort
 from flask_smorest import Blueprint
 from flask.views import MethodView
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from App.models import User, Tasks, Role
-from App.utils import DatabaseTableMixin, verify_request_headers
-from App.schema import UserSchema, UserPrototype, TableIDSchema
+from App.utils import DatabaseTableMixin, verify_request_headers, Permissions
+from App.schema import UserSchema, UserPrototype, TableIDSchema, LoginSchema
 from App.databasemanager import DatabaseContextManager
 from functools import wraps
-# from flask_jwt_extended import verify_jwt_in_request
 from prometheus_client import Summary
 from App.amqpproducer import SignalProducer
 from sqlalchemy import select, and_
@@ -94,19 +92,35 @@ class UserManager(MethodView):
             "Message": "success"
         }
 
+@views.route('/login', methods=['POST'])
+@views.arguments(schema=LoginSchema)
+def login(payload: Dict):
+    statement = select(User).where(
+        User.email == payload['email']
+    )
+    with DatabaseContextManager() as context:
+        user = context.session.execute(statement).first()
+
+
+    if check_password_hash(user['User'].password, payload['password']):
+        return user['User'].generate_token(user['User'].id)
+    else:
+        return abort(403)
 
 @views.route('/user/<int:userid>')
 @request_timer.time()
 def get_by_id(userid):
-    res = DatabaseTableMixin(User)[userid].__getitem__('User').to_json()
+    res = DatabaseTableMixin(User)[userid]['User'].to_json()
     return res
 
 
+@views.route('/claim/task/<int:taskid>', methods=['POST'])
 @verify_request_headers
-@views.route('/claim/task/<int:id>', methods=['POST'])
-def claim_task(id):
+def claim_task(current_user, taskid):
     task = DatabaseTableMixin(Tasks)
-    return task[id].__getitem__('Tasks').to_json()
+    if current_user.is_able(Permissions.EDIT_TASK):
+        return task[taskid].__getitem__('Tasks').to_json()
+    abort(403)
 
 
 @verify_request_headers

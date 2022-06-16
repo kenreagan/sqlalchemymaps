@@ -44,7 +44,7 @@ class AuthenticationMixin:
                 }
             }
 
-class User(Base):
+class User(AuthenticationMixin, Base):
     __tablename__ = 'user'
     id = Column(Integer, nullable=False, primary_key=True)
     name = Column(String, nullable=False)
@@ -89,6 +89,7 @@ class User(Base):
         :return: bool
         """
         return self.permission is not None and self.permission.roles.has_permission(permission)
+
 
     def to_json(self):
         return {
@@ -185,7 +186,4 @@ class Attachment(Base):
     task_id = Column(Integer, ForeignKey('tasks.id'), nullable=False)
 
     def __repr__(self):
-        pass
-
-    def __hash__(self):
         pass
