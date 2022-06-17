@@ -1,8 +1,7 @@
 from flask_smorest import  Blueprint
-from flask import jsonify
+from flask import jsonify, abort
 from App.utils import (
-    DatabaseTableMixin, verify_request_headers, client_and_admin_only,
-    allow_all__, request_timer
+    DatabaseTableMixin, verify_request_headers, request_timer
 )
 from App.models import Tasks
 from App.schema import TaskManagerSchema
@@ -12,7 +11,6 @@ taskers = Blueprint('Tasks Manager', __name__)
 
 @taskers.route('/', methods=['GET'])
 @taskers.response(status_code=200)
-@allow_all__
 def get_tasks():
     ManagerTable = DatabaseTableMixin(Tasks)
     return jsonify({
@@ -27,7 +25,6 @@ def get_tasks():
 @taskers.arguments(schema=TaskManagerSchema, error_status_code=400)
 @request_timer.time()
 @verify_request_headers
-@client_and_admin_only
 def create_tasks(current_user, payload):
     payload['creator_id'] = current_user.id
     ManagerTable = DatabaseTableMixin(Tasks)
@@ -37,7 +34,6 @@ def create_tasks(current_user, payload):
 
 @taskers.route('patch/', methods=['PATCH'])
 @verify_request_headers
-@client_and_admin_only
 def patch_task(current_user, payload):
     ManagerTable = DatabaseTableMixin(Tasks)
     ManagerTable[payload['id']] = payload
@@ -46,26 +42,25 @@ def patch_task(current_user, payload):
 
 @taskers.route('update/', methods=['PUT'])
 @verify_request_headers
-@client_and_admin_only
 def update_task(current_user, payload):
     ManagerTable = DatabaseTableMixin(Tasks)
     ManagerTable[payload['id']] = payload
     return payload
 
 
-@taskers.route('delete/', methods=['DELETE'])
+@taskers.route('delete/<int:taskid>', methods=['DELETE'])
 @verify_request_headers
-@client_and_admin_only
-def delete_task(current_user, task_id):
+def delete_task(current_user, taskid):
     ManagerTable = DatabaseTableMixin(Tasks)
-    ManagerTable.__delitem__(task_id)
-    return {
-        "message": "success"
-    }
+    if current_user.id == ManagerTable[taskid].creator_id:
+        ManagerTable.__delitem__(taskid)
+        return {
+            "message": "success"
+        }
+    abort(403)
 
 
 @taskers.route('/<int:taskid>')
-@allow_all__
 def get_by_id(taskid):
-    res = DatabaseTableMixin(Tasks)[taskid].__getitem__('Tasks').to_json()
-    return res
+    res = DatabaseTableMixin(Tasks)[taskid]
+    return res.json() if res else []

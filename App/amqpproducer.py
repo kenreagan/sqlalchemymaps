@@ -14,6 +14,6 @@ class SignalProducer:
         self.channel.basic_publish(
             '',
             routing_key=self.channel_name,
-            body=json.dumps(body, ensure_ascii=True),
+            body= json.dumps(body, ensure_ascii=True),
             properties=properties
         )

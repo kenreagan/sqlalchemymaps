@@ -4,25 +4,19 @@ from flask import jsonify, abort
 from flask_smorest import Blueprint
 from flask.views import MethodView
 from werkzeug.security import generate_password_hash, check_password_hash
-from App.models import User, Tasks, Role, Worker
+from App.models import User, Tasks, Worker
 from App.utils import (
-    DatabaseTableMixin, verify_request_headers, client_and_admin_only, admins_only,
+    DatabaseTableMixin, verify_request_headers,
     request_timer
 )
-from App.schema import UserSchema, UserPrototype, TableIDSchema, LoginSchema
+from App.schema import (
+    UserSchema, UserPrototype, TableIDSchema, LoginSchema
+)
 from App.databasemanager import DatabaseContextManager
-from prometheus_client import Summary
 from App.amqpproducer import SignalProducer
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, update
 
 views = Blueprint('Main User Manager', __name__)
-
-
-
-@views.before_request
-def before_request():
-    pass
-
 
 dict_object = TypeVar('dict_object', str, int)
 
@@ -67,6 +61,7 @@ class UserManager(MethodView):
             "Message": "success"
         }
 
+
 @views.route('/login', methods=['POST'])
 @views.arguments(schema=LoginSchema)
 def login(payload: Dict):
@@ -76,116 +71,108 @@ def login(payload: Dict):
     with DatabaseContextManager() as context:
         user = context.session.execute(statement).first()
 
-
     if check_password_hash(user['User'].password, payload['password']):
         return user['User'].generate_token(user['User'].id)
     else:
         return abort(403)
 
+
 @views.route('/user/<int:userid>')
 @request_timer.time()
 def get_by_id(userid):
-    res = DatabaseTableMixin(User)[userid]['User'].to_json()
-    return res
+    res = DatabaseTableMixin(User)[userid]
+    return res.to_json() if res else []
 
 
-@views.route('/claim/task/<int:taskid>', methods=['POST'])
-@verify_request_headers
-@client_and_admin_only
-def claim_task(current_user, taskid):
-    task = DatabaseTableMixin(Tasks)
-    worker = DatabaseTableMixin(Worker)
-    if task[taskid]['Tasks'].creator_id != current_user.id:
-        worker.__create_item__(
-            **{
-                "userid": current_user.id,
-                "taskid": taskid
-            }
-        )
-        payload = {
-            "progress_status": "claimed"
+@views.route('/get/task/user/<int:userid>')
+def get_tasks_users(userid):
+    with DatabaseContextManager() as context:
+        res = context.session.query(Tasks).filter_by(
+            creator_id=userid
+        ).all()
+
+    iterable = []
+    for elems in res:
+        iterable.append(elems.to_json())
+    return jsonify(
+        {
+            'tasks': iterable
         }
-        task.__setitem__(taskid, **payload)
-    return task[taskid]['Tasks'].to_json()
-
-
-@views.route('/get/task/<int:userid>')
-@verify_request_headers
-@client_and_admin_only
-def get_tasks_users(current_user, userid):
-    res = DatabaseTableMixin(Tasks)
-    return res.to_json()
+    )
 
 
 # client and administrator
-@client_and_admin_only
-@verify_request_headers
-@request_timer.time()
 @views.route('/pay/task/<int:taskid>', methods=["POST"])
-def pay_task(taskid):
-    """"
-    Add the Request to payment que for processing by the payment service
-    """
+@request_timer.time()
+@verify_request_headers
+def pay_task(current_user, taskid):
     # get user and task
-
-    task = DatabaseTableMixin(Tasks)[taskid].__getitem__('Tasks').to_json()
-    if task:
-        # get the user of the task details
-        with DatabaseContextManager() as context:
-            statements = select(
-                User.name,
-                User.email,
-                User.phone
+    with DatabaseContextManager() as context:
+        task = context.session.query(
+            Tasks
+        ).filter(
+            and_(
+                Tasks.creator_id == current_user.id,
+                Tasks.id == taskid
             )
-            x = statements.select_from(
-                Tasks.__table__.join(
-                    User
+        ).first()
+
+        if task:
+            if task.payment_status == "unpaid":
+                producer = SignalProducer("Individual Task Payment")
+                #  add details to RabbitMq queue
+                feedback = current_user.to_json().update(task.to_json())
+                producer.produce_event(
+                    'request payment',
+                    json.dumps(feedback)
                 )
-            ).where(
-                and_(
-                    Tasks.creator_id == 2, # replace it with current user.id
-                    Tasks.id == taskid
-                )
-            )
-
-            res = context.session.execute(x).first()
-        feedback = res._asdict()
-
-        for key, val in task.items():
-            feedback[key] = val
-
-        producer = SignalProducer("Individual Task Payment")
-        #  add details to RabbitMq queue
-        producer.produce_event(
-            'request payment',
-            json.dumps(feedback)
-        )
-        return {
-            "status": "Pending payment"
-        }
-    return {}
+                return {
+                    "status": "Task payment progress initialized ..."
+                }
+            else:
+                return {
+                    'message': "Task is already paid"
+                }
+        else:
+            return {
+                'message': "task already paid"
+            }
 
 
 # superuser and Administrator
-@admins_only
 @verify_request_headers
 @request_timer.time()
-@views.route('/disburse/funds/<int:clientid>')
-def disburse_funds(clientid):
+@views.route('/disburse/funds/<int:worker>')
+def disburse_funds(current_user, worker):
     # pay weekly to client
-    user = DatabaseTableMixin(User)[clientid].__getitem__('User').to_json()
-    if user is not None:
-        if user['Amount'] > 500:
-            producer = SignalProducer("Disburse Funds")
-            producer.produce_event(
-                'disburse multiple',
-                str(user)
-            )
+    if current_user.is_admin:
+        user = DatabaseTableMixin(Worker)[worker]
+        if user is not None:
+            if user.account > 0:
+                statement = update(
+                    Worker
+                ).values(
+                    **{
+                        'account': 0
+                    }
+                ).where(
+                    id=worker
+                )
+                producer = SignalProducer("Disburse Funds")
+                producer.produce_event(
+                    'disburse multiple',
+                    str(user)
+                )
+
+                with DatabaseContextManager() as context:
+                    context.session.execute(statement)
+                    context.commit()
+                return {
+                    "message": "Funds Disbursement initialized ..."
+                }
             return {
-                "message": "Funds Disbursed"
+                "Message": "insufficient funds"
             }
-        return {
-            "Message": "user has low account"
-        }
-    else:
-        return user
+        else:
+            return user
+    abort(403)

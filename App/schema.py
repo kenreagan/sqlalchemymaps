@@ -25,3 +25,14 @@ class TaskManagerSchema(Schema):
     title = fields.String()
     Amount = fields.Integer()
     description = fields.String()
+    status = fields.String()
+
+
+class TaskViewSchema(Schema):
+    id = fields.Integer()
+    title = fields.String()
+    Amount = fields.Integer()
+    description = fields.String()
+    status = fields.String()
+    worker = fields.Integer()
+    payment_status = fields.String()

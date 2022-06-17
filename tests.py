@@ -4,10 +4,9 @@ from typing import Dict, Optional
 from app import create_app
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from App.models import Base, User, Tasks, Role
+from App.models import Base, User, Tasks
 from flask import current_app
-from App.utils import DatabaseTableMixin, BaseMapper
+from App.utils import DatabaseTableMixin
 
 
 class TestApplication(unittest.TestCase):
@@ -20,9 +19,6 @@ class TestApplication(unittest.TestCase):
         self.client = self.app.test_client(use_cookies=True)
         self.userManager = DatabaseTableMixin(User)
         self.TaskManager = DatabaseTableMixin(Tasks)
-        self.RoleManager = DatabaseTableMixin(Role)
-        self.roleMapper = BaseMapper()
-        self.roleMapper.create_role_permission()
 
     def tearDown(self) -> None:
         self.app.context.pop()
@@ -52,10 +48,8 @@ class TestApplication(unittest.TestCase):
             "phone": "+254794784462",
             'name': 'Lumuli',
             'email': 'lumuli@gmail.com',
-            'Amount': 0,
-            'permission': 0
         },
-            lumuli.__getitem__('User').to_json()
+            lumuli.to_json()
         )
         self.assertEqual(1, len([item for item in iter(self.userManager)]))
         self.assertIsNotNone(lumuli)
@@ -91,30 +85,8 @@ class TestApplication(unittest.TestCase):
         }
 
         self.TaskManager.__create_item__(task_2payload)
-        self.assertEqual(len(self.TaskManager), 2)
-        self.task_2 = self.TaskManager[2]
-
-        self.assertGreater(self.task_1, self.task_2)
-        self.TaskManager.__delitem__(2)
         self.assertEqual(len(self.TaskManager), 1)
-
-    def testTaskClaiming(self):
-        pass
-
-    def testDetailsUpdate(self):
-        pass
-
-    def testRoleAssignment(self):
-        pass
-
-    def testSuperAdminRoles(self):
-        pass
-
-    def testWorkerRole(self):
-        pass
-
-    def testClientRole(self):
-        self.assertGreater(len(self.RoleManager), 2)
+        self.assertEqual(len(self.TaskManager), 1)
 
     def testResponse(self):
         response = self.client.get('/index')
