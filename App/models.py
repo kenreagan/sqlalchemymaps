@@ -4,7 +4,7 @@ from typing import Dict, Optional
 from flask import current_app
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, ForeignKey, Integer, Boolean
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 import datetime
 import jwt
 
@@ -44,6 +44,22 @@ class AuthenticationMixin:
                 }
             }
 
+class Worker(Base):
+    __tablename__ = 'workers'
+    id = Column(Integer, primary_key = True)
+    userid = Column(Integer, ForeignKey('user.id'), nullable=False)
+    taskid = Column(Integer, ForeignKey('tasks.id'), nullable=False)
+
+    def __init__(self, *args, **kwargs):
+        super(Worker, self).__init__(*args, **kwargs)
+        #validate user
+
+    def __repr__(self):
+        return f"{self.__class__.__qualname__}(" \
+                f"userid={self.userid}"\
+               f"taskid={self.taskid})"
+
+
 class User(AuthenticationMixin, Base):
     __tablename__ = 'user'
     id = Column(Integer, nullable=False, primary_key=True)
@@ -53,8 +69,9 @@ class User(AuthenticationMixin, Base):
     phone = Column(String)
     account = Column(Integer, nullable=False, default=0)
     is_admin = Column(Boolean, default=False)
+    tasks = relationship('Worker', lazy='dynamic', backref=backref('taskclaimed'))
     permission = Column(Integer, ForeignKey('roles.id'), nullable=False, default=0)
-    task_created = relationship('Tasks', lazy='dynamic', backref='creator', cascade="all, delete-orphan")
+    task_created = relationship('Tasks', lazy='dynamic', backref=backref('creator'), cascade="all, delete-orphan")
 
     def __init__(self, *args, **kwargs) -> None:
         super(User, self).__init__(*args, **kwargs)
@@ -88,7 +105,7 @@ class User(AuthenticationMixin, Base):
         :param permission:
         :return: bool
         """
-        return self.permission is not None and self.permission.roles.has_permission(permission)
+        return self.permission is not None
 
 
     def to_json(self):
@@ -107,7 +124,14 @@ class Role(Base):
     rolename = Column(String)
     default = Column(Boolean, index=True)
     permission = Column(Integer)
-    user = relationship('User', lazy='dynamic', backref='roles', cascade="all, delete-orphan")
+    user = relationship('User', lazy='joined', backref=backref('roles'), cascade="all, delete-orphan")
+
+    def to_json(self):
+        return {
+            'id': self.id,
+            'name': self.rolename,
+            'permission': self.permission
+        }
 
     def __init__(self, *args, **kwargs):
         super(Role, self).__init__(*args, **kwargs)
@@ -144,6 +168,7 @@ class Tasks(Base):
     attachment = relationship('Attachment', lazy='dynamic', backref='task', cascade="all, delete-orphan")
     payment_status = Column(String, default='paid')
     progress_status = Column(String, default="unclaimed")
+    worker = relationship('Worker', lazy='dynamic', backref=backref('worker'))
 
     def __repr__(self):
         return f"{self.__class__.__qualname__}(Amount={self.Amount}, creator id={self.creator_id})"

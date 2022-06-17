@@ -25,4 +25,3 @@ class TaskManagerSchema(Schema):
     title = fields.String()
     Amount = fields.Integer()
     description = fields.String()
-    creator_id = fields.Integer()

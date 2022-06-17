@@ -8,6 +8,12 @@ from sqlalchemy import insert, update, select
 from functools import wraps
 from flask import request, make_response, current_app
 import jwt
+from prometheus_client import Summary
+
+request_timer = Summary(
+    'time_request_summary',
+    'track endpoint request summary to track the slow endpoints'
+)
 
 def verify_request_headers(func):
     @wraps(func)
@@ -37,6 +43,36 @@ def verify_request_headers(func):
         return func(current_user, *args, **kwargs)
 
     return wrapper
+
+def admins_only(func):
+    @wraps(func)
+    def allow_admin(current_user, *args, **kwargs):
+        if not current_user.is_able(Permissions.MODERATE_TASK):
+            return make_response({
+                "message": "Forbidden Endpoint"
+            }, 401)
+        return func(current_user, *args, **kwargs)
+    return allow_admin
+
+
+def client_and_admin_only(func):
+    @wraps(func)
+    def allow_admin_and_client(current_user, *args, **kwargs):
+        if not current_user.is_able(Permissions.CREATE_TASK):
+            return make_response({
+                "message" : "Forbidden Endpoint"
+            }, 401)
+        return func(current_user, *args, **kwargs)
+
+    return allow_admin_and_client
+
+
+def allow_all__(func):
+    @wraps(func)
+    def allow_all(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    return allow_all
 
 
 class Permissions(Enum):
@@ -116,16 +152,17 @@ class BaseMapper(RolesMapper):
             return self.roles.append(self.KeyListMapper(key, value))
         elif isinstance(value, list):
             for elements in value:
+                print(elements)
                 self.__setitem__(key, elements)
 
     @staticmethod
     def create_role_permission():
         roles = BaseMapper()
-        roles['Admin'] = [Permissions.VIEW_TASK, Permissions.CREATE_TASK, Permissions.DELETE_TASK,
-                          Permissions.EDIT_TASK, Permissions.MODERATE_TASK]
-        roles['Worker'] = [Permissions.VIEW_TASK, Permissions.EDIT_TASK]
-        roles['Client'] = [Permissions.CREATE_TASK, Permissions.DELETE_TASK, Permissions.EDIT_TASK]
-        roles['Visitor'] = [Permissions.VIEW_TASK]
+        roles['Admin'] = [Permissions(0).value, Permissions(1).value, Permissions(2).value,
+                          Permissions(4).value, Permissions(8).value]
+        roles['Worker'] = [Permissions(0).value, Permissions(1).value]
+        roles['Client'] = [Permissions(0).value, Permissions(1).value, Permissions(2).value, Permissions(4).value]
+        roles['Visitor'] = [Permissions(0).value]
 
         child = set([item.role.name for item in roles])
 

@@ -14,7 +14,7 @@ class DatabaseContextManager:
                 "check_same_thread": False
             }
         )
-        self.Session = sessionmaker(bind=self.engine)
+        self.Session = sessionmaker(bind=self.engine, expire_on_commit=False)
 
     def __enter__(self):
         self.session = self.Session()

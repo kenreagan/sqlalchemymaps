@@ -43,4 +43,8 @@ def create_app(configuration_file='configuration.Config'):
     from App.taskviews import taskers
 
     api.register_blueprint(taskers, url_prefix='/tasks/')
+
+    from App.Rolemanager import roles
+    api.register_blueprint(roles, url_prefix='/role')
+
     return app

@@ -74,7 +74,8 @@ class TestApplication(unittest.TestCase):
         task_1payload: Dict[str, str] = {
             "description": "Create a latex file to edit the below configurations and present it in a nice looking userinterface",
             "Amount": int(30000),
-            "creator_id": 1
+            "creator_id": 1,
+            "title": "great content"
         }
         self.assertIsNone(self.TaskManager.__create_item__(task_1payload))
         self.assertGreater(len(self.TaskManager), 0)
@@ -121,7 +122,7 @@ class TestApplication(unittest.TestCase):
         self.assertIsInstance(response.data, bytes)
 
     def testTaskEndpoints(self):
-        response = self.client.get('/tasks')
+        response = self.client.get('/tasks/')
         self.assertEqual(response.status_code, 200)
 
 if __name__ == '__main__':
