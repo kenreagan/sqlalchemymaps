@@ -44,20 +44,27 @@ class AuthenticationMixin:
                 }
             }
 
-class Worker(Base):
+class Worker(AuthenticationMixin, Base):
     __tablename__ = 'workers'
     id = Column(Integer, primary_key = True)
-    userid = Column(Integer, ForeignKey('user.id'), nullable=False)
-    taskid = Column(Integer, ForeignKey('tasks.id'), nullable=False)
-
-    def __init__(self, *args, **kwargs):
-        super(Worker, self).__init__(*args, **kwargs)
-        #validate user
+    name = Column(String)
+    password = Column(String)
+    email = Column(String)
+    account = Column(Integer, nullable=False, default=0)
+    phone = Column(String)
+    task = Column(Integer, ForeignKey('Tasks.id'))
 
     def __repr__(self):
         return f"{self.__class__.__qualname__}(" \
-                f"userid={self.userid}"\
-               f"taskid={self.taskid})"
+               f"id={self.id}, name={self.name})"
+
+    def to_json(self):
+        return {
+            'name': self.name,
+            'email': self.email,
+            'Amount': self.account,
+            'phone': self.phone
+        }
 
 
 class User(AuthenticationMixin, Base):
@@ -67,10 +74,7 @@ class User(AuthenticationMixin, Base):
     email = Column(String, nullable=False)
     password = Column(String, nullable=False)
     phone = Column(String)
-    account = Column(Integer, nullable=False, default=0)
     is_admin = Column(Boolean, default=False)
-    tasks = relationship('Worker', lazy='dynamic', backref=backref('taskclaimed'))
-    permission = Column(Integer, ForeignKey('roles.id'), nullable=False, default=0)
     task_created = relationship('Tasks', lazy='dynamic', backref=backref('creator'), cascade="all, delete-orphan")
 
     def __init__(self, *args, **kwargs) -> None:
@@ -94,68 +98,15 @@ class User(AuthenticationMixin, Base):
         pass
 
     def __hash__(self):
-        return hash((self.name, self.email, self.phone, self.permission,))
-
-    def is_able(self, permission) -> bool:
-        """
-        >>> from App.utils import Permissions
-        >>> x = User().isable(Permissions.EDIT_TASK)
-        >>> print(x)
-        ... False
-        :param permission:
-        :return: bool
-        """
-        return self.permission is not None
-
+        return hash((self.name, self.email, self.phone,))
 
     def to_json(self):
         return {
             'name': self.name,
             'email': self.email,
-            'Amount': 0,
-            'permission': self.permission,
+            'Amount': self.account,
             'phone': self.phone
         }
-
-
-class Role(Base):
-    __tablename__ = 'roles'
-    id = Column(Integer, primary_key=True, nullable=False)
-    rolename = Column(String)
-    default = Column(Boolean, index=True)
-    permission = Column(Integer)
-    user = relationship('User', lazy='joined', backref=backref('roles'), cascade="all, delete-orphan")
-
-    def to_json(self):
-        return {
-            'id': self.id,
-            'name': self.rolename,
-            'permission': self.permission
-        }
-
-    def __init__(self, *args, **kwargs):
-        super(Role, self).__init__(*args, **kwargs)
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__qualname__}(name={self.rolename}, permission={self.permission!r})"
-
-    def add_permission(self, permission):
-        if isinstance(permission, list):
-            for permissions in permission:
-                self.add_permission(permissions.value)
-        else:
-            if not self.has_permission(permission.value):
-                self.permission += permission.value
-
-    def remove_permission(self, permission):
-        if self.has_permission(permission):
-            self.permission -= permission
-
-    def reset_permission(self):
-        self.permission = 1
-
-    def has_permission(self, permission):
-        return self.permission & permission == permission
 
 
 class Tasks(Base):

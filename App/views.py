@@ -18,12 +18,6 @@ from sqlalchemy import select, and_
 views = Blueprint('Main User Manager', __name__)
 
 
-
-@views.before_request
-def before_request():
-    pass
-
-
 dict_object = TypeVar('dict_object', str, int)
 
 

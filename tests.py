@@ -5,9 +5,9 @@ from app import create_app
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from App.models import Base, User, Tasks, Role
+from App.models import Base, User, Tasks
 from flask import current_app
-from App.utils import DatabaseTableMixin, BaseMapper
+from App.utils import DatabaseTableMixin
 
 
 class TestApplication(unittest.TestCase):
@@ -20,9 +20,6 @@ class TestApplication(unittest.TestCase):
         self.client = self.app.test_client(use_cookies=True)
         self.userManager = DatabaseTableMixin(User)
         self.TaskManager = DatabaseTableMixin(Tasks)
-        self.RoleManager = DatabaseTableMixin(Role)
-        self.roleMapper = BaseMapper()
-        self.roleMapper.create_role_permission()
 
     def tearDown(self) -> None:
         self.app.context.pop()
