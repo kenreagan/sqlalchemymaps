@@ -1,3 +1,5 @@
+import json
+
 from flask_smorest import Blueprint
 from flask.views import MethodView
 from flask import jsonify, abort
@@ -9,9 +11,11 @@ from sqlalchemy import select, update
 from App.utils import DatabaseContextManager, verify_worker_request_headers
 from typing import Dict
 from werkzeug.security import check_password_hash
+from App.amqpproducer import SignalProducer
 
 worker = Blueprint('Worker Manager', __name__)
 
+producer = SignalProducer("Worker Manager")
 
 @worker.route('/')
 class WorkerManager(MethodView):
@@ -30,6 +34,12 @@ class WorkerManager(MethodView):
     def post(self, payload):
         payload['password'] = generate_password_hash(payload['password'])
         self.worker.__create_item__(payload)
+        producer.produce_event(
+            'user create',
+            json.dumps(
+                payload
+            )
+        )
         return payload
 
     def patch(self):

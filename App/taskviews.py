@@ -1,4 +1,4 @@
-from flask_smorest import  Blueprint
+from flask_smorest import Blueprint
 from flask import jsonify, abort
 from App.utils import (
     DatabaseTableMixin, verify_request_headers, request_timer

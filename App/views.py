@@ -1,10 +1,9 @@
-import json
 from typing import Dict, Optional, TypeVar
 from flask import jsonify, abort
 from flask_smorest import Blueprint
 from flask.views import MethodView
 from werkzeug.security import generate_password_hash, check_password_hash
-from App.models import User, Tasks, Worker
+from App.models import User, Tasks
 from App.utils import (
     DatabaseTableMixin, verify_request_headers,
     request_timer
@@ -13,8 +12,8 @@ from App.schema import (
     UserSchema, UserPrototype, TableIDSchema, LoginSchema
 )
 from App.databasemanager import DatabaseContextManager
-from App.amqpproducer import SignalProducer
 from sqlalchemy import select, and_, update
+from App import mpesa
 
 views = Blueprint('Main User Manager', __name__)
 
@@ -119,15 +118,26 @@ def pay_task(current_user, taskid):
 
         if task:
             if task.payment_status == "unpaid":
-                producer = SignalProducer("Individual Task Payment")
-                #  add details to RabbitMq queue
-                feedback = current_user.to_json().update(task.to_json())
-                producer.produce_event(
-                    'request payment',
-                    json.dumps(feedback)
+                req = mpesa.prompt_payment_for_service(
+                    amount=task.amount,
+                    recepient=current_user.phone
                 )
+                if req.status_code != 200:
+                    return {
+                        "Status": "Transaction failed"
+                    }
+                statement = update(
+                    Tasks
+                ).values(
+                    **{
+                        "payment_status": "paid"
+                    }
+                ).where(
+                    id=taskid
+                )
+                context.session.execute(statement)
                 return {
-                    "status": "Task payment progress initialized ..."
+                    "status": "Task paid success"
                 }
             else:
                 return {
@@ -137,42 +147,3 @@ def pay_task(current_user, taskid):
             return {
                 'message': "task already paid"
             }
-
-
-# superuser and Administrator
-@verify_request_headers
-@request_timer.time()
-@views.route('/disburse/funds/<int:worker>')
-def disburse_funds(current_user, worker):
-    # pay weekly to client
-    if current_user.is_admin:
-        user = DatabaseTableMixin(Worker)[worker]
-        if user is not None:
-            if user.account > 0:
-                statement = update(
-                    Worker
-                ).values(
-                    **{
-                        'account': 0
-                    }
-                ).where(
-                    id=worker
-                )
-                producer = SignalProducer("Disburse Funds")
-                producer.produce_event(
-                    'disburse multiple',
-                    str(user)
-                )
-
-                with DatabaseContextManager() as context:
-                    context.session.execute(statement)
-                    context.commit()
-                return {
-                    "message": "Funds Disbursement initialized ..."
-                }
-            return {
-                "Message": "insufficient funds"
-            }
-        else:
-            return user
-    abort(403)
