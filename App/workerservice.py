@@ -15,7 +15,7 @@ from App.amqpproducer import SignalProducer
 
 worker = Blueprint('Worker Manager', __name__)
 
-producer = SignalProducer("Worker Manager")
+# producer = SignalProducer("Worker Manager")
 
 @worker.route('/')
 class WorkerManager(MethodView):
@@ -34,12 +34,6 @@ class WorkerManager(MethodView):
     def post(self, payload):
         payload['password'] = generate_password_hash(payload['password'])
         self.worker.__create_item__(payload)
-        producer.produce_event(
-            'user create',
-            json.dumps(
-                payload
-            )
-        )
         return payload
 
     def patch(self):

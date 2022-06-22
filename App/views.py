@@ -119,12 +119,15 @@ def pay_task(current_user, taskid):
         if task:
             if task.payment_status == "unpaid":
                 req = mpesa.prompt_payment_for_service(
-                    amount=task.amount,
-                    recepient=current_user.phone
+                    {
+                        'amount':task.Amount,
+                        'phone':current_user.phone,
+                        'name': current_user.name
+                    }
                 )
                 if req.status_code != 200:
                     return {
-                        "Status": "Transaction failed"
+                        "Message": "An error Occurred"
                     }
                 statement = update(
                     Tasks
@@ -133,9 +136,9 @@ def pay_task(current_user, taskid):
                         "payment_status": "paid"
                     }
                 ).where(
-                    id=taskid
+                    Tasks.id==taskid
                 )
-                context.session.execute(statement)
+                # context.session.execute(statement)
                 return {
                     "status": "Task paid success"
                 }

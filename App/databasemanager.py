@@ -2,9 +2,9 @@ from flask import current_app
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-# from App.models import Base
-#
-# Base.metadata.create_all(create_engine('sqlite:///master.sqlite'))
+from App.models import Base
+
+Base.metadata.create_all(create_engine('sqlite:///master.sqlite'))
 
 
 class DatabaseContextManager:

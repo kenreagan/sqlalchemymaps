@@ -3,9 +3,9 @@ from flask_smorest import Api
 from MpesaRest import Mpesa
 
 config = {
-    'consumer_key': "arguegr0ut854tbgr890t",
-    'consumer_secret': "92345-2347654",
-    'business_code': "574977",
+    'consumer_key': "GfcDOBUOM4oFzQpmq6QUYL2TR8rJXhvM",
+    'consumer_secret': "66olbx4MCiDMfoIz",
+    'business_code': "174379",
     "phone_number": "254794784462"
 }
 
