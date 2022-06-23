@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 
 from App.models import Base
 
-Base.metadata.create_all(create_engine('sqlite:///master.sqlite'))
+Base.metadata.create_all(create_engine('mysql+pymysql://ken:Lumuli1234#@localhost/Workersite'))
 
 
 class DatabaseContextManager:

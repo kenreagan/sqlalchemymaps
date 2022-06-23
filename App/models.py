@@ -47,10 +47,10 @@ class AuthenticationMixin:
 class User(AuthenticationMixin, Base):
     __tablename__ = 'user'
     id = Column(Integer, nullable=False, primary_key=True)
-    name = Column(String, nullable=False)
-    email = Column(String, nullable=False)
-    password = Column(String, nullable=False)
-    phone = Column(String)
+    name = Column(String(250), nullable=False)
+    email = Column(String(250), nullable=False)
+    password = Column(String(250), nullable=False)
+    phone = Column(String(250))
     is_admin = Column(Boolean, default=False)
     task_created = relationship('Tasks', lazy='dynamic', backref=backref('creator'), cascade="all, delete-orphan")
 
@@ -95,13 +95,13 @@ class User(AuthenticationMixin, Base):
 class Tasks(Base):
     __tablename__ = 'tasks'
     id = Column(Integer, nullable=False, primary_key=True)
-    description = Column(String, nullable=False)
+    description = Column(String(250), nullable=False)
     Amount = Column(Integer, nullable=False)
-    title = Column(String, nullable=False)
+    title = Column(String(250), nullable=False)
     creator_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     attachment = relationship('Attachment', lazy='dynamic', backref='task', cascade="all, delete-orphan")
-    payment_status = Column(String, default='unpaid')
-    progress_status = Column(String, default="unclaimed")
+    payment_status = Column(String(250), default='unpaid')
+    progress_status = Column(String(250), default="unclaimed")
     task = Column(Integer, ForeignKey('workers.id'))
 
     def __repr__(self):
@@ -146,7 +146,7 @@ class Tasks(Base):
 class Attachment(Base):
     __tablename__ = 'attachment'
     id = Column(Integer, primary_key=True, nullable=False)
-    attachment_name = Column(String, nullable=False)
+    attachment_name = Column(String(250), nullable=False)
     task_id = Column(Integer, ForeignKey('tasks.id'), nullable=False)
 
     def __repr__(self):
@@ -156,11 +156,11 @@ class Attachment(Base):
 class Worker(AuthenticationMixin, Base):
     __tablename__ = 'workers'
     id = Column(Integer, primary_key=True)
-    name = Column(String)
-    password = Column(String)
-    email = Column(String)
-    account = Column(Integer, nullable=False, default=0)
-    phone = Column(String)
+    name = Column(String(250))
+    password = Column(String(250))
+    email = Column(String(250))
+    account = Column(String(250), nullable=False, default=0)
+    phone = Column(String(250))
     worker = relationship('Tasks', lazy='dynamic', backref=backref('worker'))
 
     def __repr__(self):
