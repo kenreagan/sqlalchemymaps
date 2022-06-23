@@ -5,7 +5,7 @@ from MpesaRest import Mpesa
 config = {
     'consumer_key': "GfcDOBUOM4oFzQpmq6QUYL2TR8rJXhvM",
     'consumer_secret': "66olbx4MCiDMfoIz",
-    'business_code': "174379",
+    'business_code': 174379,
     "phone_number": "254794784462"
 }
 

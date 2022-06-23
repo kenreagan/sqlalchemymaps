@@ -91,6 +91,7 @@ class DatabaseTableMixin(MutableMapping, ABC):
             )
             try:
                 contextmanager.session.execute(statement)
+                contextmanager.commit()
             except Exception as e:
                 print(f"{e!r}")
             finally:

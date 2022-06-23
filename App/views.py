@@ -121,32 +121,33 @@ def pay_task(current_user, taskid):
                 req = mpesa.prompt_payment_for_service(
                     {
                         'amount':task.Amount,
-                        'phone':current_user.phone,
-                        'name': current_user.name
+                        'phone':current_user.phone
                     }
                 )
-                if req.status_code != 200:
-                    return {
-                        "Message": "An error Occurred"
-                    }
-                statement = update(
-                    Tasks
-                ).values(
-                    **{
-                        "payment_status": "paid"
-                    }
-                ).where(
-                    Tasks.id==taskid
-                )
-                # context.session.execute(statement)
-                return {
-                    "status": "Task paid success"
-                }
+                if req['errors']:
+                    return req
+                return req
             else:
                 return {
                     'message': "Task is already paid"
                 }
         else:
             return {
-                'message': "task already paid"
+                'message': "task does not exist"
             }
+
+@views.route('/payment/status/callback', methods=["POST"])
+@request_timer.time()
+def handle_payment_success(payload):
+    print(payload)
+    with DatabaseContextManager() as context:
+        statement = update(
+            Tasks
+        ).values(
+            **{
+                "payment_status": "paid"
+            }
+        ).where(
+            Tasks.id == taskid
+        )
+        context.session.execute(statement)
