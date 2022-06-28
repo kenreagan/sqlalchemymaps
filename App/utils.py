@@ -2,12 +2,15 @@ from abc import ABC
 from collections.abc import MutableMapping
 from App.databasemanager import DatabaseContextManager
 from App.models import Base, User, Worker
-from typing import Iterable, List, Dict, Any
+from typing import Iterable, List, Dict, Any, Union
 from sqlalchemy import insert, update, select
 from functools import wraps
 from flask import request, make_response, current_app
 import jwt
 from prometheus_client import Summary
+import requests
+from App import mpesa
+import queue
 
 request_timer = Summary(
     'time_request_summary',
@@ -120,3 +123,13 @@ class DatabaseTableMixin(MutableMapping, ABC):
         with DatabaseContextManager() as contextmanager:
             contextmanager.session.delete(instance)
             contextmanager.commit()
+
+
+def fetch_status(transaction_code) -> Union[None, Dict]:
+    status = None
+    if isinstance(transaction_code, str):
+        data = mpesa.check_lipa_na_mpesa_status(
+            transaction_code
+        )
+        return data
+    return status

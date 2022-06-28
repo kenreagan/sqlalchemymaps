@@ -1,19 +1,32 @@
+import os
 from typing import Dict, Optional, TypeVar
-from flask import jsonify, abort
+
+import requests
+from flask import (
+    jsonify,
+    abort,
+    make_response
+)
 from flask_smorest import Blueprint
 from flask.views import MethodView
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import (
+    generate_password_hash,
+    check_password_hash
+)
 from App.models import User, Tasks
 from App.utils import (
-    DatabaseTableMixin, verify_request_headers,
-    request_timer
+    DatabaseTableMixin,
+    verify_request_headers,
+    request_timer,
+    fetch_status
 )
 from App.schema import (
     UserSchema, UserPrototype, TableIDSchema, LoginSchema
 )
 from App.databasemanager import DatabaseContextManager
-from sqlalchemy import select, and_, update
+from sqlalchemy import select, and_
 from App import mpesa
+import threading
 
 views = Blueprint('Main User Manager', __name__)
 
@@ -120,13 +133,44 @@ def pay_task(current_user, taskid):
             if task.payment_status == "unpaid":
                 req = mpesa.prompt_payment_for_service(
                     {
-                        'amount':task.Amount,
-                        'phone':current_user.phone
+                        'amount': task.Amount,
+                        'phone': current_user.phone
                     }
                 )
                 if req['errors']:
                     return req
-                return req
+                
+                threading_lock = threading.Lock()
+                thread = [
+                    threading.Thread(
+                        target=fetch_status,
+                        args=(req['CustomerId'],)
+                    )
+                    for _ in range(os.cpu_count())
+                ]
+                
+                with threading_lock:
+                    for threads in thread:
+                        threads.start()
+
+                    for threads in thread:
+                        threads.join()
+
+                status = requests.get(
+                    mpesa.callback
+                ).json()
+
+                if status['statusCode'] == 1:
+                    task.payment_status = 'paid'
+                    context.session.commit()
+                    return make_response(
+                        {
+                            'Message': 'Task Pay success'
+                        },200
+                    )
+                return {
+                    'Message': 'transaction'
+                }
             else:
                 return {
                     'message': "Task is already paid"
@@ -136,18 +180,8 @@ def pay_task(current_user, taskid):
                 'message': "task does not exist"
             }
 
-@views.route('/payment/status/callback', methods=["POST"])
+
+@views.route('/payment/status/callback', methods=["GET"])
 @request_timer.time()
 def handle_payment_success(payload):
-    print(payload)
-    with DatabaseContextManager() as context:
-        statement = update(
-            Tasks
-        ).values(
-            **{
-                "payment_status": "paid"
-            }
-        ).where(
-            Tasks.id == taskid
-        )
-        context.session.execute(statement)
+    return payload
