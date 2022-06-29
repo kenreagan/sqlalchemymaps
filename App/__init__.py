@@ -8,7 +8,7 @@ mpesa = Mpesa(
     174379,
     '254794784462',
     '0b2b4d8482fddaf34d7ea78b402c2b40ed0db4b101007b46a89d0b9cd12b3fb2',
-    '/payment/status/callback'
+    'http://127.0.0.1:5000/payment/status/callback'
 )
 
 api = Api()

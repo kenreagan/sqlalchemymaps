@@ -1,5 +1,6 @@
 import os
-from typing import Dict, Optional, TypeVar
+import queue
+from typing import Dict, Optional, TypeVar, Union, Iterable, List
 
 import requests
 from flask import (
@@ -18,7 +19,6 @@ from App.utils import (
     DatabaseTableMixin,
     verify_request_headers,
     request_timer,
-    fetch_status
 )
 from App.schema import (
     UserSchema, UserPrototype, TableIDSchema, LoginSchema
@@ -31,6 +31,39 @@ import threading
 views = Blueprint('Main User Manager', __name__)
 
 dict_object = TypeVar('dict_object', str, int)
+
+
+def fetch_status(transaction_code) -> Union[None, Dict]:
+    status = None
+    if isinstance(transaction_code, str):
+        data = mpesa.check_lipa_na_mpesa_status(
+            transaction_code
+        )
+        return data
+    return status
+
+
+def fetch_callback() -> Dict[str, Union[Iterable, Dict, str]]:
+    status = requests.get(
+        mpesa.callback
+    )
+    return status.json()
+
+
+def Slave(tasks_queue: queue.Queue, rewards_queue: queue.Queue):
+    global task
+    while not tasks_queue.empty():
+        try:
+            task = tasks_queue.get(block=False)
+        except queue.Empty:
+            break
+        finally:
+            status = fetch_status(task)
+
+            callback_res = fetch_callback()
+            rewards_queue.put(item=callback_res)
+            rewards_queue.put(item=status)
+            tasks_queue.task_done()
 
 
 @views.route('/users')
@@ -139,38 +172,44 @@ def pay_task(current_user, taskid):
                 )
                 if req['errors']:
                     return req
-                
+
+                Worker = queue.Queue()
+
+                results = queue.Queue()
+
+                processing_tasks: List[str] = [req['MerchantID']]
+
+                for details in processing_tasks:
+                    Worker.put(details)
+
                 threading_lock = threading.Lock()
                 thread = [
                     threading.Thread(
-                        target=fetch_status,
-                        args=(req['CustomerId'],)
+                        target=Slave,
+                        args=(Worker, results,)
                     )
                     for _ in range(os.cpu_count())
                 ]
-                
+
                 with threading_lock:
                     for threads in thread:
                         threads.start()
 
-                    for threads in thread:
-                        threads.join()
+                    while thread:
+                        thread.pop().join()
 
-                status = requests.get(
-                    mpesa.callback
-                ).json()
-
-                if status['statusCode'] == 1:
+                status = results.get()
+                if status[0] == status[1]:
                     task.payment_status = 'paid'
                     context.session.commit()
                     return make_response(
                         {
                             'Message': 'Task Pay success'
-                        },200
+                        }, 200
                     )
-                return {
-                    'Message': 'transaction'
-                }
+                return make_response({
+                    'Message': 'Transaction payment Failed try restarting ....'
+                }, 404)
             else:
                 return {
                     'message': "Task is already paid"

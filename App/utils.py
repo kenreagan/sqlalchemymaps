@@ -124,12 +124,3 @@ class DatabaseTableMixin(MutableMapping, ABC):
             contextmanager.session.delete(instance)
             contextmanager.commit()
 
-
-def fetch_status(transaction_code) -> Union[None, Dict]:
-    status = None
-    if isinstance(transaction_code, str):
-        data = mpesa.check_lipa_na_mpesa_status(
-            transaction_code
-        )
-        return data
-    return status
