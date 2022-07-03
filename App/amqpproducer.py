@@ -1,10 +1,10 @@
 import pika, json
+import os
 
 
 class SignalProducer:
     def __init__(self, channel_name):
-        self.url = 'amqps://zihhojzz:FFw4QOF6kVqu39ux1klMs8won5ww2ynU@albatross.rmq.cloudamqp.com/zihhojzz'
-        self.connection = pika.BlockingConnection()
+        self.url = os.environ.get('AMQP_KEY')
         self.channel = self.connection.channel()
         self.channel_name = channel_name
 
