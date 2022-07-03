@@ -1,15 +1,24 @@
 from flask import current_app
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
-# from App.models import Base
+import os
+from App.models import Base
 #
-# Base.metadata.create_all(create_engine('mysql+pymysql://ken:Lumuli1234#@localhost/Workersite'))
+
+database_name = os.environ.get('DATABASE_NAME')
+database_password = os.environ.get('DATABASE_PASSWORD')
+database_author = os.environ.get('DATABASE_AUTHOR')
+
+Base.metadata.create_all(
+    create_engine(
+        f'mysql+pymysql://{database_author}:{database_password}@localhost/{database_name}'
+    )
+)
 
 
 class DatabaseContextManager:
     def __init__(self):
-        self.databasefilename: str = 'sqlite:///test.db' if current_app.config['ENVIRONMENT'] == 'testing' else 'sqlite:///master.sqlite'
+        self.databasefilename: str = 'sqlite:///test.db' if current_app.config['ENVIRONMENT'] == 'testing' else f'mysql+pymysql://{database_author}:{database_name}@localhost/{database_name}'
         self.engine = create_engine(self.databasefilename, echo=True)
         self.Session = sessionmaker(bind=self.engine, expire_on_commit=False)
 
