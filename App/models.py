@@ -3,7 +3,9 @@ from __future__ import annotations
 from typing import Dict, Optional
 from flask import current_app
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, ForeignKey, Integer, Boolean
+from sqlalchemy import (
+    Column, String, ForeignKey, Integer, Boolean, DateTime
+)
 from sqlalchemy.orm import relationship, backref
 import datetime
 import jwt
@@ -103,6 +105,7 @@ class Tasks(Base):
     payment_status = Column(String(250), default='unpaid')
     progress_status = Column(String(250), default="unclaimed")
     task = Column(Integer, ForeignKey('workers.id'))
+    date_created = Column(DateTime, nullable=False, default=datetime.datetime.utcnow)
 
     def __repr__(self):
         return f"{self.__class__.__qualname__}(Amount={self.Amount}, creator id={self.creator_id})"
@@ -139,7 +142,8 @@ class Tasks(Base):
             "status": self.progress_status,
             "title": self.title,
             "worker": self.task,
-            "payment_status": self.payment_status
+            "payment_status": self.payment_status,
+            "created": self.date_created
         }
 
 
@@ -194,3 +198,19 @@ class Worker(AuthenticationMixin, Base):
         if self.__class__ == other.__class__:
             return self.account != other.account
         raise NotImplementedError('Incomparable Types')
+
+class Advertisement(Base):
+    __tablename__ ='advertisement'
+
+    id = Column(Integer, nullable=False, primary_key=True)
+    description = Column(String)
+    file_path = Column(String)
+
+    def __repr__(self):
+        return f'{self.__class__.__qualname__}(description={self.description}, file_path={self.file_path})'
+
+    def to_json(self):
+        return {
+            'description': self.description,
+            'file_path': self.file_path
+        }

@@ -35,3 +35,8 @@ class TaskViewSchema(Schema):
     status = fields.String()
     worker = fields.Integer()
     payment_status = fields.String()
+    created = fields.String()
+
+class AdSchema(Schema):
+    description = fields.String()
+    file_path = fields.String()
