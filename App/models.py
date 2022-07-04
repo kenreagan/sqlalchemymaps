@@ -203,8 +203,8 @@ class Advertisement(Base):
     __tablename__ ='advertisement'
 
     id = Column(Integer, nullable=False, primary_key=True)
-    description = Column(String)
-    file_path = Column(String)
+    description = Column(String(250))
+    file_path = Column(String(250))
 
     def __repr__(self):
         return f'{self.__class__.__qualname__}(description={self.description}, file_path={self.file_path})'
