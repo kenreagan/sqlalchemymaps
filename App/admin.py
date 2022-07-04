@@ -7,7 +7,7 @@ from App.utils import DatabaseTableMixin
 admin = Blueprint('Admin Endpoint', __name__)
 
 
-@admin.route('/home', methods=["GET"])
+@admin.route('/home')
 class AdvertisementManager(MethodView):
     def __init__(self):
         self.advertisement = DatabaseTableMixin(Advertisement)
