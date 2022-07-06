@@ -18,7 +18,7 @@ Base.metadata.create_all(
 
 class DatabaseContextManager:
     def __init__(self):
-        self.databasefilename: str = 'sqlite:///test.db' if current_app.config['ENVIRONMENT'] == 'testing' else f'mysql+pymysql://{database_author}:{database_name}@localhost/{database_name}'
+        self.databasefilename: str = 'sqlite:///test.db' if current_app.config['ENVIRONMENT'] == 'testing' else f'mysql+pymysql://{database_author}:{database_password}@localhost/{database_name}'
         self.engine = create_engine(self.databasefilename, echo=True)
         self.Session = sessionmaker(bind=self.engine, expire_on_commit=False)
 

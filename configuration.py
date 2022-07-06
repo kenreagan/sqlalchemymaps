@@ -14,6 +14,7 @@ class Config(object):
     OPENAPI_URL_PREFIX = '/'
     OPENAPI_SWAGGER_UI_PATH = '/api/documentation'
     OPENAPI_SWAGGER_UI_URL = 'https://cdn.jsdelivr.net/npm/swagger-ui-dist/'
+    JSONIFY_PRETTYPRINT_REGULAR = True
 
 class ProductionConfig(Config):
     pass
