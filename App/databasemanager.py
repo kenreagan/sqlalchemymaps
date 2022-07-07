@@ -11,14 +11,14 @@ database_author = os.environ.get('DATABASE_AUTHOR')
 
 Base.metadata.create_all(
     create_engine(
-        f'mysql+pymysql://{database_author}:{database_password}@localhost/{database_name}'
+        f'mysql+pymysql://{database_author}:{database_password}@taskwithmeke/{database_name}'
     )
 )
 
 
 class DatabaseContextManager:
     def __init__(self):
-        self.databasefilename: str = 'sqlite:///test.db' if current_app.config['ENVIRONMENT'] == 'testing' else f'mysql+pymysql://{database_author}:{database_password}@localhost/{database_name}'
+        self.databasefilename: str = 'sqlite:///test.db' if current_app.config['ENVIRONMENT'] == 'testing' else f'mysql+pymysql://{database_author}:{database_password}@taskwithmeke/{database_name}'
         self.engine = create_engine(self.databasefilename, echo=True)
         self.Session = sessionmaker(bind=self.engine, expire_on_commit=False)
 

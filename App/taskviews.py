@@ -63,4 +63,4 @@ def delete_task(current_user, taskid):
 @taskers.route('/<int:taskid>')
 def get_by_id(taskid):
     res = DatabaseTableMixin(Tasks)[taskid]
-    return res.json() if res else []
+    return res.to_json() if res else []
