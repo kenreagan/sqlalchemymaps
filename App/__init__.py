@@ -1,15 +1,18 @@
 from flask import Flask
 from flask_smorest import Api
-from MpesaRest import Mpesa
+# from MpesaRest import Mpesa
 
-mpesa = Mpesa(
-    'x6GCRysuUJKUzyLZ2Ylujlb4fEbt882r',
-    'QErq8SPCFBxwCDzK',
-    174379,
-    '254794784462',
-    '0b2b4d8482fddaf34d7ea78b402c2b40ed0db4b101007b46a89d0b9cd12b3fb2',
-    'http://127.0.0.1:5000/payment/status/callback'
-)
+#mpesa = Mpesa(
+ #  consumer_key='GfcDOBUOM4oFzQpmq6QUYL2TR8rJXhvM',
+  # consumer_secret='66olbx4MCiDMfoIz',
+   #business_code=174379,
+   #passcode='bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919',
+   #call_back='https://myapp.co.ke/',
+   #environment='development',
+   #phone_number=254794784462,
+   #BusinessShortCode=174379,
+   #Accountreference='MyCompany'
+#)
 
 api = Api()
 

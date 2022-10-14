@@ -5,10 +5,10 @@ from flask.views import MethodView
 from flask import jsonify, abort
 from werkzeug.security import generate_password_hash
 from App.models import Worker, Tasks
-from App.utils import DatabaseTableMixin
+from App.utils import DatabaseTableMixin, verify_worker_request_headers
 from App.schema import UserSchema, LoginSchema, TaskViewSchema
 from sqlalchemy import select, update
-from App.utils import DatabaseContextManager, verify_worker_request_headers
+from App.databasemanager import DatabaseContextManager
 from typing import Dict
 from werkzeug.security import check_password_hash
 from App.amqpproducer import SignalProducer

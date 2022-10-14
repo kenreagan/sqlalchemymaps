@@ -25,7 +25,7 @@ from App.schema import (
 )
 from App.databasemanager import DatabaseContextManager
 from sqlalchemy import select, and_
-from App import mpesa
+#from App import mpesa
 import threading
 
 views = Blueprint('Main User Manager', __name__)

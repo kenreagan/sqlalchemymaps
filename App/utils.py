@@ -1,16 +1,17 @@
-from abc import ABC
-from collections.abc import MutableMapping
-from App.databasemanager import DatabaseContextManager
-from App.models import Base, User, Worker
-from typing import Iterable, List, Dict, Any, Union
+# from future import __annotations__
+from typing import Dict, Any, Optional
 from sqlalchemy import insert, update, select
 from functools import wraps
 from flask import request, make_response, current_app
 import jwt
 from prometheus_client import Summary
 import requests
-from App import mpesa
+# from App import mpesa
 import queue
+from App.models import Base
+from collections.abc import MutableMapping
+from abc import ABC
+from App.databasemanager import DatabaseContextManager
 
 request_timer = Summary(
     'time_request_summary',
