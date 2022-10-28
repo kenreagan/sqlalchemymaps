@@ -11,7 +11,7 @@ from sqlalchemy import select, update
 from App.databasemanager import DatabaseContextManager
 from typing import Dict
 from werkzeug.security import check_password_hash
-from App.amqpproducer import SignalProducer
+# from App.amqpproducer import SignalProducer
 
 worker = Blueprint('Worker Manager', __name__)
 

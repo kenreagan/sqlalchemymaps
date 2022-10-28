@@ -10,3 +10,6 @@ venv/
 *.db
 
 *.env
+
+# Notification service in separate repository
+NotifcationService/
