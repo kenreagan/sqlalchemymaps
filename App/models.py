@@ -33,7 +33,7 @@ class AuthenticationMixin:
                 "status": "ExpiredSignatureError",
                 "message": "Expired token",
                 "errors": {
-                    "": ""
+                        "": ""
                 }
             }
         except jwt.InvalidTokenError:
@@ -166,7 +166,7 @@ class Worker(AuthenticationMixin, Base):
     account = Column(String(250), nullable=False, default=0)
     phone = Column(String(250))
     worker = relationship('Tasks', lazy='dynamic', backref=backref('worker'))
-
+    
     def __repr__(self):
         return f"{self.__class__.__qualname__}(" \
                f"id={self.id}, name={self.name})"

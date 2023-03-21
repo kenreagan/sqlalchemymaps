@@ -23,7 +23,6 @@ def get_tasks():
 @taskers.route('create/', methods=['POST'])
 @taskers.response(schema=TaskManagerSchema, status_code=201)
 @taskers.arguments(schema=TaskManagerSchema, error_status_code=400)
-@request_timer.time()
 @verify_request_headers
 def create_tasks(current_user, payload):
     payload['creator_id'] = current_user.id

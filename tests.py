@@ -4,7 +4,7 @@ from typing import Dict, Optional
 from app import create_app
 import os
 from sqlalchemy import create_engine
-from App.models import Base, User, Tasks
+from App.models import Base, User, Tasks, Worker
 from flask import current_app
 from App.utils import DatabaseTableMixin
 
@@ -19,6 +19,7 @@ class TestApplication(unittest.TestCase):
         self.client = self.app.test_client(use_cookies=True)
         self.userManager = DatabaseTableMixin(User)
         self.TaskManager = DatabaseTableMixin(Tasks)
+        self.WorkerManager = DatabaseTableMixin(Worker)
 
     def tearDown(self) -> None:
         self.app.context.pop()
@@ -77,12 +78,32 @@ class TestApplication(unittest.TestCase):
 
         self.task_1 = self.TaskManager[1]
         self.assertIsNotNone(self.task_1)
+        
 
+        #test task claimingq by worker
+
+        # Worker creation
+
+        worker_payload = {
+            "name": "lumuli",
+            "email": "lumulikenreagan@gmail.com",
+            "password": "test",
+            "phone": "254710850362"
+        }
+    
+        self.WorkerManager.__create_item__(worker_payload)
+        self.assertEqual(len(self.WorkerManager), 1)
+
+        # claim task by worker
         task_2payload: Dict[str, Optional[str, int]] = {
             "description": "Create a python file to send email asynchronously",
             "Amount": int(3000),
             "creator_id": 1
         }
+
+        self.worker = self.client.get('/worker/')
+        self.assertTrue(self.worker.status_code, 200)
+        print(self.worker)
 
         self.TaskManager.__create_item__(task_2payload)
         self.assertEqual(len(self.TaskManager), 1)
@@ -96,6 +117,8 @@ class TestApplication(unittest.TestCase):
     def testTaskEndpoints(self):
         response = self.client.get('/tasks/')
         self.assertEqual(response.status_code, 200)
+
+        # test task creation
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_smorest import Api
+from flask_cors import CORS
 # from MpesaRest import Mpesa
 
 #mpesa = Mpesa(
@@ -15,6 +16,11 @@ from flask_smorest import Api
 #)
 
 api = Api()
+
+cors_inst = CORS(resources={"/*":{
+        "origins": "*"
+    }
+})
 
 
 def create_app(configuration_file='configuration.Config'):
@@ -37,7 +43,7 @@ def create_app(configuration_file='configuration.Config'):
         })
     }
     api.init_app(app)
-
+    cors_inst.init_app(app)
     from App.views import views
 
     from App.admin import admin

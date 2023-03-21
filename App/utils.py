@@ -12,6 +12,7 @@ from App.models import Base
 from collections.abc import MutableMapping
 from abc import ABC
 from App.databasemanager import DatabaseContextManager
+from App.models import User
 
 request_timer = Summary(
     'time_request_summary',
@@ -50,6 +51,7 @@ def verify_worker_request_headers(func):
 def verify_request_headers(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
+        current_user = None 
         if "Authorization" in request.headers:
             token = request.headers['Authorization'].split(' ')[-1]
             try:
@@ -93,13 +95,11 @@ class DatabaseTableMixin(MutableMapping, ABC):
             statement = insert(self.table).values(
                 **value
             )
-            try:
-                contextmanager.session.execute(statement)
-                contextmanager.commit()
-            except Exception as e:
-                print(f"{e!r}")
-            finally:
-                contextmanager.commit()
+            #try:
+            contextmanager.session.execute(statement)
+            contextmanager.commit()
+            # except Exception as e:
+            #    print(f"{e!r}")
 
     def __setitem__(self, key, value: Dict[str, str]) -> Dict[str, str]:
         with DatabaseContextManager() as contextmanager:
@@ -119,7 +119,7 @@ class DatabaseTableMixin(MutableMapping, ABC):
             for elements in contextmanager.session.query(self.table):
                 yield elements
 
-    def __delitem__(self, key):
+    def __delitem__(self, key)-> None:
         instance = self[key]
         with DatabaseContextManager() as contextmanager:
             contextmanager.session.delete(instance)
